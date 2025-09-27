@@ -1,4 +1,5 @@
 import loadLedger from '@ledger/ledger.js';
+import loadPath from '@ledger/ledger.wasm?url';
 import type { LedgerModule } from './types';
 
 interface ExitStatus {
@@ -185,7 +186,7 @@ async function newInstance(environment?: LedgerEnvironment) {
   const stderr = new StringBuilder();
   const config: Partial<LedgerModule> = {
     locateFile: (path: string, prefix: string) => {
-      return env.wasmFileLocation || prefix + path;
+      return env.wasmFileLocation || loadPath || prefix + path;
     },
     preRun: [() => config.FS?.init(stdin.iter(), null, null)],
     print: stdout.appender(),

@@ -28,3 +28,7 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# Auto-imports
+auto-imports.d.ts
+components.d.ts
