@@ -56,8 +56,11 @@ jobs:
           ./b2 --prefix=../dist \
                --with-date_time --with-filesystem --with-iostreams \
                --with-nowide --with-regex --with-test \
-               cxxflags="-sWASM_LEGACY_EXCEPTIONS=0"
-               toolset=emscripten address-model=32 link=static variant=release threading=single install
+               toolset=emscripten address-model=32 variant=release \
+               link=static threading=single \
+               cxxflags=-sWASM_LEGACY_EXCEPTIONS=0 \
+               cflags=-sWASM_LEGACY_EXCEPTIONS=0 \
+               install
           cd ..
           rm -rf boost
       - name: Build GMP

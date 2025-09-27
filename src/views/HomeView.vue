@@ -36,7 +36,7 @@ update();
         />
       </ElFormItem>
       <ElFormItem label="Input">
-        <ElInput v-model="store.input" type="textarea" :autosize="true" style="font-family: monospace;" />
+        <ElInput v-model="store.input" type="textarea" autosize style="font-family: monospace;" />
       </ElFormItem>
     </ElForm>
     <template #footer>

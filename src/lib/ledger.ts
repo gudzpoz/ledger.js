@@ -208,7 +208,7 @@ class WebAssemblyCaching {
     const fake = await source;
     if (fake !== null) {
       console.error('other assembly loaded!');
-      return this.#instantiateStreaming(fake, imports);
+      return this.#instantiateStreaming.call(WebAssembly, fake, imports);
     }
     if (this.#cached !== null) {
       return {
@@ -216,8 +216,10 @@ class WebAssemblyCaching {
         instance: await WebAssembly.instantiate(this.#cached, imports),
       };
     }
-    const result = await this.#instantiateStreaming(
-      this.#fetch(loadPath, { credentials: 'same-origin' }), imports,
+    const result = await this.#instantiateStreaming.call(
+      WebAssembly,
+      this.#fetch.call(globalThis, loadPath, { credentials: 'same-origin' }),
+      imports,
     );
     this.#cached = result.module;
     return result;
@@ -225,6 +227,8 @@ class WebAssemblyCaching {
 }
 export const caching = new WebAssemblyCaching();
 caching.enable();
+
+export const DATA_DIR = '/data';
 
 /**
  * Loads the required WASM files for Ledger and instantiates one.
@@ -240,5 +244,9 @@ export async function newInstance() {
     printErr: stderr.appender(),
   };
   const runtime = await loadLedger(config);
+  runtime.FS.mkdir(DATA_DIR);
+  runtime.FS.mount(runtime.IDBFS, { autoPersist: true }, DATA_DIR);
+  runtime.FS.chdir(DATA_DIR);
+  await new Promise((accept) => runtime.FS.syncfs(true, accept));
   return new LedgerCLI(runtime, stdin, stdout, stderr);
 }

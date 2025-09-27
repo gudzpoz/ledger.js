@@ -16,7 +16,7 @@ LDFLAGS=\
   -lidbfs.js       \
 	-sINVOKE_RUN=0   \
 	-sEXIT_RUNTIME=0 \
-	-sEXPORTED_RUNTIME_METHODS=FS,HEAPU8,stringToUTF8,lengthBytesUTF8 \
+	-sEXPORTED_RUNTIME_METHODS=FS,IDBFS,HEAPU8,stringToUTF8,lengthBytesUTF8 \
 	-sEXPORTED_FUNCTIONS=_main,_malloc,_free \
 	-sINCOMING_MODULE_JS_API=locateFile,print,printErr,preRun \
 
