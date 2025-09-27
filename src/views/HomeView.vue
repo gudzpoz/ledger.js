@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { newInstance } from '@/lib/ledger';
 import { ref, watch } from 'vue';
+
+import { newInstance } from '@/lib/ledger';
+import parseSexpr from '@/lib/emacs';
 import { useLedgeStore } from '@/stores/ledges';
 
 const store = useLedgeStore();
@@ -19,7 +21,15 @@ async function update() {
     input,
   );
   status.value = result.status;
-  output.value = result.stdout === '' ? result.stderr : result.stdout;
+  let text = result.stdout === '' ? result.stderr : result.stdout;
+  if (text.startsWith('(')) {
+    try {
+      text += '\n' + JSON.stringify(parseSexpr(text), null, 2);
+    } catch (e) {
+      console.log('unexpected non-sexpr', text, e);
+    }
+  }
+  output.value = text;
 }
 watch(store, update);
 update();
