@@ -1,11 +1,22 @@
 {
   "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "include": ["env.d.ts", "src/**/*", "src/**/*.vue"],
+  "include": [
+    "env.d.ts",
+    "src/**/*", "src/**/*.vue",
+    "ledger/build/ledger.js"
+  ],
   "exclude": ["src/**/__tests__/*"],
   "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "esModuleInterop": true,
+    "typeRoots": [
+      "node_modules/@types",
+      "src/lib"
+    ],
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-
     "paths": {
+      "@ledger/*": ["./ledger/build/*"],
       "@/*": ["./src/*"]
     }
   }

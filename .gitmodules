@@ -1,0 +1,4 @@
+[submodule "ledger"]
+	path = ledger
+	url = https://github.com/gudzpoz/ledger.git
+	branch = emscripten-build
