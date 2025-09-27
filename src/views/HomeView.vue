@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import newInstance from '@/lib/ledger';
+import { newInstance } from '@/lib/ledger';
 import { ref, watch } from 'vue';
 import { useLedgeStore } from '@/stores/ledges';
 

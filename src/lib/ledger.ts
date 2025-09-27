@@ -54,13 +54,6 @@ class StringBuilder {
 }
 
 /**
- * Ledger environment config.
- */
-interface LedgerEnvironment {
-  wasmFileLocation?: string;
-}
-
-/**
  * Ledger execution results.
  */
 interface LedgerResult {
@@ -124,6 +117,11 @@ class LedgerCLI {
     };
   }
 
+  #reset() {
+    this.#stdout.clear();
+    this.#stderr.clear();
+  }
+
   /**
    * Executes a Ledger command.
    *
@@ -132,8 +130,8 @@ class LedgerCLI {
    * ```
    */
   run(args?: string[], stdin?: string) {
-    this.#stdout.clear();
-    this.#stderr.clear();
+    this.#reset();
+
     const argvPointers = this.#wrapStringArray(['ledger', ...(args ?? [])]);
     const argvArray = this.#wrapNumberArray(argvPointers);
     const input = this.#convertStdin(stdin);
@@ -176,24 +174,71 @@ class LedgerCLI {
 }
 
 /**
+ * Wraps `fetch` and `WebAssembly.instantiateStreaming` to cache compiled products.
+ *
+ * Modern browsers JIT-compiles WASM code. Re-instantiating code over and over
+ * will probably kill the performance.
+ */
+class WebAssemblyCaching {
+  #cached: WebAssembly.Module | null = null;
+  #fetch: typeof fetch;
+  #instantiateStreaming: typeof WebAssembly.instantiateStreaming;
+
+  constructor() {
+    this.#fetch = fetch;
+    this.#instantiateStreaming = WebAssembly.instantiateStreaming;
+  }
+
+  enable() {
+    globalThis.fetch = this.#fetchAdvice;
+    WebAssembly.instantiateStreaming = this.#instantiateAdvice;
+  }
+  disable() {
+    globalThis.fetch = this.#fetch;
+    WebAssembly.instantiateStreaming = this.#instantiateStreaming;
+  }
+
+  #fetchAdvice: typeof fetch = (...args) => {
+    if (args.length > 0 && args[0] === loadPath) {
+      return Promise.resolve(null) as unknown as Promise<Response>;
+    }
+    return this.#fetch(...args);
+  };
+  #instantiateAdvice: typeof WebAssembly.instantiateStreaming = async (source, imports) => {
+    const fake = await source;
+    if (fake !== null) {
+      console.error('other assembly loaded!');
+      return this.#instantiateStreaming(fake, imports);
+    }
+    if (this.#cached !== null) {
+      return {
+        module: this.#cached,
+        instance: await WebAssembly.instantiate(this.#cached, imports),
+      };
+    }
+    const result = await this.#instantiateStreaming(
+      this.#fetch(loadPath, { credentials: 'same-origin' }), imports,
+    );
+    this.#cached = result.module;
+    return result;
+  };
+}
+export const caching = new WebAssemblyCaching();
+caching.enable();
+
+/**
  * Loads the required WASM files for Ledger and instantiates one.
  */
-async function newInstance(environment?: LedgerEnvironment) {
-  const env = environment ?? {};
+export async function newInstance() {
   const stdin = new StringReader();
   const stdout = new StringBuilder();
   const stderr = new StringBuilder();
   const config: Partial<LedgerModule> = {
-    locateFile: (path: string, prefix: string) => {
-      return env.wasmFileLocation || loadPath || prefix + path;
-    },
+    locateFile: () => loadPath,
     preRun: [() => config.FS?.init(stdin.iter(), null, null)],
     print: stdout.appender(),
     printErr: stderr.appender(),
   };
   const runtime = await loadLedger(config);
-  console.log(runtime);
   return new LedgerCLI(runtime, stdin, stdout, stderr);
 }
-
-export default newInstance;

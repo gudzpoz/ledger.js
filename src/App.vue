@@ -7,7 +7,7 @@ const menu = router.options.routes;
 
 <template>
   <el-container>
-    <el-header>
+    <el-header style="--el-header-padding: 0">
       <el-menu mode="horizontal" router :default-active="router.currentRoute.value.path">
         <el-menu-item v-for="item in menu" :index="item.path" :key="item.path">
           {{ item.meta?.['title'] }}
