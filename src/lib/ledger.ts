@@ -97,7 +97,6 @@ class LedgerCLI {
   #wrapNumberArray(ptrs: number[]) {
     const length = ptrs.length * 4;
     const array = this.#runtime._malloc(length);
-    console.log(this.#runtime);
     new Uint8Array(this.#runtime.HEAPU8.buffer, array, length).set(
       new Uint8Array(new Uint32Array(ptrs).buffer),
     );
@@ -145,7 +144,7 @@ class LedgerCLI {
     } catch (e) {
       const result = e as ExitStatus;
       if (typeof e === 'object' && result.name === 'ExitStatus') {
-        console.log(result.message);
+        this.#stderr.s = result.message + '\n';
         status = result.status;
       }
     }

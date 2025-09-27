@@ -56,6 +56,7 @@ jobs:
           ./b2 --prefix=../dist \
                --with-date_time --with-filesystem --with-iostreams \
                --with-nowide --with-regex --with-test \
+               cxxflags="-sWASM_LEGACY_EXCEPTIONS=0"
                toolset=emscripten address-model=32 link=static variant=release threading=single install
           cd ..
           rm -rf boost
@@ -65,12 +66,12 @@ jobs:
           GMP_VER: ${{ matrix.version.gmp }}
         run: |
           cd ledger/build
-          wget https://ftp.gnu.org/gnu/gmp/gmp-${GMP_VER}.tar.xz
+          wget https://ftpmirror.gnu.org/gnu/gmp/gmp-${GMP_VER}.tar.xz
           tar -Jxf gmp-${GMP_VER}.tar.xz
           mv gmp-${GMP_VER} gmp
           cd gmp
           emconfigure ./configure --disable-assembly --host wasm32 --enable-cxx --prefix=$(realpath ../dist)
-          emmake make
+          emmake make CFLAGS="-sWASM_LEGACY_EXCEPTIONS=0"
           emmake make install
           cd ..
           rm -rf gmp
@@ -80,12 +81,12 @@ jobs:
           MPFR_VER: ${{ matrix.version.mpfr }}
         run: |
           cd ledger/build
-          wget https://ftp.gnu.org/gnu/mpfr/mpfr-${MPFR_VER}.tar.xz
+          wget https://ftpmirror.gnu.org/gnu/mpfr/mpfr-${MPFR_VER}.tar.xz
           tar -Jxf mpfr-${MPFR_VER}.tar.xz
           mv mpfr-${MPFR_VER} mpfr
           cd mpfr
           emconfigure ./configure --host wasm32 --prefix=$(realpath ../dist) --with-gmp=$(realpath ../dist)
-          emmake make
+          emmake make CFLAGS="-sWASM_LEGACY_EXCEPTIONS=0"
           emmake make install
           cd ..
           rm -rf mpfr

@@ -1,4 +1,7 @@
-LDFLAGS= \
+CXXFLAGS=\
+	-sWASM_LEGACY_EXCEPTIONS=0 \
+
+LDFLAGS=\
 	-sEXPORT_ES6=1       \
 	-sEXPORT_NAME=ledger \
 	-sMODULARIZE=1       \
@@ -8,8 +11,9 @@ LDFLAGS= \
 	-sSTACK_SIZE=1048576    \
 	-sMALLOC=emmalloc       \
 	\
-	-sFORCE_FILESYSTEM=1       \
 	-sWASM_LEGACY_EXCEPTIONS=0 \
+	\
+  -lidbfs.js       \
 	-sINVOKE_RUN=0   \
 	-sEXIT_RUNTIME=0 \
 	-sEXPORTED_RUNTIME_METHODS=FS,HEAPU8,stringToUTF8,lengthBytesUTF8 \
@@ -22,23 +26,18 @@ all: ledger/build/ledger.js
 
 ledger/build/Makefile: Makefile
 	rm -f ledger/build/Makefile
-	cd ledger; env LDFLAGS="$(LDFLAGS)" \
+	cd ledger; env CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" \
 		./acprep --emscripten --boost="$(LIB_DIR)" --output=build/ opt configure
 
-ledger/build/ledger-pre.js: ledger/build/Makefile
-	cd ledger; env LDFLAGS="$(LDFLAGS)" \
+ledger/build/ledger.js: ledger/build/Makefile
+	cd ledger; env env CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" \
 		./acprep --emscripten --boost="$(LIB_DIR)" --output=build/ opt make
-	mv ledger/build/ledger.js $@
-
-ledger/build/ledger.js: ledger/build/ledger-pre.js
-	# Emscripten TTY issue: https://github.com/emscripten-core/emscripten/issues/22264
-	sed -e 's/if\s*(!stream.tty)/if(!stream.tty||!stream.tty.ops)/g' \
-			-e 's/,\s*tty:\s*true,/,tty:false,/g' \
-			$< > $@
 
 clean:
 	rm -f ledger/build/ledger-pre.js
 	rm -f ledger/build/ledger.js
+	rm -f ledger/build/ledger.wasm
 	rm -f ledger/build/CMakeCache.txt
+	rm -f ledger/build/Makefile
 
 .PHONY: all
