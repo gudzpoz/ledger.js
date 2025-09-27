@@ -1,0 +1,118 @@
+name: CMake
+
+on:
+  push:
+    branches: main
+
+jobs:
+  emscripten:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version:
+          - emsdk: 4.0.13
+            boost: 1_89_0
+            gmp: 6.3.0
+            mpfr: 4.2.2
+    steps:
+      - uses: actions/checkout@v4
+        name: Check out repository code
+        with:
+          submodules: true
+      - name: Cache Emscripten
+        uses: actions/cache@v4
+        with:
+          path: 'emsdk-cache'
+          key: ${{ runner.os }}-emsdk-${{ matrix.version.emsdk }}
+      - uses: mymindstorm/setup-emsdk@v14
+        name: Emscripten setup
+        with:
+          version: ${{ matrix.version.emsdk }}
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Restore cached libraries
+        id: cache-wasm-lib-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ledger/build/
+          key: >-
+            ${{ runner.os }}-wasm-libs-${{ matrix.version.emsdk }}
+            -${{ matrix.version.boost }}
+            -${{ matrix.version.gmp }}
+            -${{ matrix.version.mpfr }}
+            -${{ hashFiles('**/.gitmodules') }}
+      - name: Build Boost
+        if: steps.cache-wasm-lib-restore.outputs.cache-hit != 'true'
+        env:
+          BOOST_VER: ${{ matrix.version.boost }}
+        run: |
+          mkdir -p ledger/build
+          cd ledger/build
+          wget https://archives.boost.io/release/${BOOST_VER//_/.}/source/boost_${BOOST_VER}.tar.gz
+          tar -zxf boost_${BOOST_VER}.tar.gz
+          mv boost_${BOOST_VER} boost
+          cd boost
+          ./bootstrap.sh
+          ./b2 --prefix=../dist \
+               --with-date_time --with-filesystem --with-iostreams \
+               --with-nowide --with-regex --with-test \
+               toolset=emscripten address-model=32 link=static variant=release threading=single install
+          cd ..
+          rm -rf boost
+      - name: Build GMP
+        if: steps.cache-wasm-lib-restore.outputs.cache-hit != 'true'
+        env:
+          GMP_VER: ${{ matrix.version.gmp }}
+        run: |
+          cd ledger/build
+          wget https://ftp.gnu.org/gnu/gmp/gmp-${GMP_VER}.tar.xz
+          tar -Jxf gmp-${GMP_VER}.tar.xz
+          mv gmp-${GMP_VER} gmp
+          cd gmp
+          emconfigure ./configure --disable-assembly --host wasm32 --enable-cxx --prefix=$(realpath ../dist)
+          emmake make
+          emmake make install
+          cd ..
+          rm -rf gmp
+      - name: Build MPFR
+        if: steps.cache-wasm-lib-restore.outputs.cache-hit != 'true'
+        env:
+          MPFR_VER: ${{ matrix.version.mpfr }}
+        run: |
+          cd ledger/build
+          wget https://ftp.gnu.org/gnu/mpfr/mpfr-${MPFR_VER}.tar.xz
+          tar -Jxf mpfr-${MPFR_VER}.tar.xz
+          mv mpfr-${MPFR_VER} mpfr
+          cd mpfr
+          emconfigure ./configure --host wasm32 --prefix=$(realpath ../dist) --with-gmp=$(realpath ../dist)
+          emmake make
+          emmake make install
+          cd ..
+          rm -rf mpfr
+      - name: Build Ledger
+        if: steps.cache-wasm-lib-restore.outputs.cache-hit != 'true'
+        run: make
+      - name: Save library build results
+        uses: actions/cache/save@v4
+        with:
+          path: ledger/build/
+          key: ${{ steps.cache-wasm-lib-restore.outputs.cache-primary-key }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - name: Install Dependencies
+        run: pnpm install
+      - name: Build Site
+        run: pnpm build
+      - name: Deploy pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
