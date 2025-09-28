@@ -1,7 +1,7 @@
 import loadLedger from '@ledger/ledger.js';
 import loadPath from '@ledger/ledger.wasm?url';
 
-import type { LedgerModule } from './types';
+import type { LedgerModule, Transaction } from './types';
 import { parseSexpr, type SExpr } from './emacs';
 
 interface ExitStatus {
@@ -253,22 +253,6 @@ export async function newInstance() {
   return new LedgerCLI(runtime, stdin, stdout, stderr);
 }
 
-export interface Posting {
-  lineNum: number,
-  account: string,
-  amount: string,
-  status: boolean,
-  comment?: string,
-}
-export interface Transaction {
-  file: string,
-  lineNum: number,
-  time: number,
-  code: boolean,
-  payee: string,
-  postings: Posting[],
-}
-
 function requireArray(x: SExpr): SExpr[] {
   if (!Array.isArray(x)) {
     throw new Error(`sexp: require array: ${x}`);
@@ -287,34 +271,34 @@ function requireNumber(x: SExpr): number {
   }
   return x;
 }
-function requireBoolean(x: SExpr): boolean {
-  if (typeof x !== 'boolean') {
-    throw new Error(`sexp: require boolean: ${x}`);
-  }
-  return x;
-}
 
 export function parseEmacsString(emacs: string) {
   const sexp = requireArray(parseSexpr(emacs));
   return sexp.map((xact): Transaction => {
-    const [file, lineNum, time, code, payee, ...postings] = requireArray(xact);
+    const [_file, _lineNum, time, code, payee, ...postings] = requireArray(xact);
     const [high, low] = requireArray(time).map(requireNumber);
     return {
-      file: requireString(file),
-      lineNum: requireNumber(lineNum),
-      time: high << 16 + low,
-      code: requireBoolean(code),
+      date: new Date((high << 16 + low) * 1000).toISOString().substring(0, 10),
       payee: requireString(payee),
-      postings: postings.map((posting) => {
-        const [lineNum, account, amount, status, comment] = requireArray(posting);
-        return {
-          lineNum: requireNumber(lineNum),
-          account: requireString(account),
-          amount: requireString(amount),
-          status: requireBoolean(status),
-          comment: comment ? requireString(comment) : void 0,
-        };
-      }),
+      code: code ? requireString(code) : void 0,
+      postings: {
+        posting: postings.map((posting) => {
+          const [_lineNum, account, amount, status, comment] = requireArray(posting);
+          return {
+            account: { ref: '', name: requireString(account) },
+            'post-amount': {
+              amount: {
+                commodity: {
+                  symbol: requireString(amount),
+                },
+                quantity: NaN, // FIXME: properly parse amount?
+              },
+            },
+            state: typeof status === 'boolean' ? (status ? 'cleared' : void 0) : 'pending',
+            note: comment ? requireString(comment) : void 0,
+          };
+        }),
+      },
     };
   });
 }

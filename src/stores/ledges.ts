@@ -9,6 +9,7 @@ function state() {
   const bookmarks = ref([
     '-f - balance',
     '-f - register',
+    '-f - xml',
     '-f - emacs',
     '--version',
   ]);

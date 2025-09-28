@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { XMLParser } from 'fast-xml-parser';
 
 import { newInstance, parseEmacsString } from '@/lib/ledger';
 import { useLedgeStore } from '@/stores/ledges';
+import type { CommodityQuantity, LedgerXML, Transaction } from '@/lib/types';
+import { toArray } from '@vueuse/core';
 
 const store = useLedgeStore();
 const status = ref(0);
@@ -12,12 +15,45 @@ function querySearch() {
   return store.bookmarks.map((value) => ({ value }));
 }
 
+const xmlParser = new XMLParser({
+  attributeNamePrefix: '',
+  ignoreAttributes: false,
+});
 const emacs = ref<{
   date: string,
   what: string,
   account: string,
   amount: string,
 }[]>([]);
+function asArray<T>(x: T | T[]) {
+  if (Array.isArray(x)) {
+    return x;
+  }
+  return [x];
+}
+function toTable(xacts: readonly Transaction[]) {
+  return xacts.flatMap(({ date, payee, postings }) => {
+    const rows = asArray(postings.posting).map(({ account, 'post-amount': amount }) => {
+      let amount1: CommodityQuantity;
+      if (Array.isArray(amount.amount)) {
+        amount1 = amount.amount[0];
+      } else {
+        amount1 = amount.amount;
+      }
+      const amountText = `${
+        amount1.commodity?.symbol ?? ''
+      } ${isNaN(amount1.quantity) ? '' : amount1.quantity}`;
+      return {
+        date: '', what: '',
+        account: account.name,
+        amount: amountText,
+      };
+    });
+    rows[0].date = date;
+    rows[0].what = payee;
+    return rows;
+  });
+}
 async function update() {
   const { command, input } = store;
   const ledger = await newInstance();
@@ -30,14 +66,16 @@ async function update() {
   emacs.value = [];
   if (text.startsWith('(')) {
     try {
-      emacs.value = parseEmacsString(text).flatMap(({ time, payee, postings }) => {
-        const rows = postings.map(({ account, amount }) => ({ date: '', what: '', account, amount }));
-        rows[0].date = new Date(time * 1000).toLocaleString();
-        rows[0].what = payee;
-        return rows;
-      });
+      emacs.value = toTable(parseEmacsString(text));
     } catch (e) {
       console.log('unexpected non-sexpr', text, e);
+    }
+  } else if (text.startsWith('<')) {
+    try {
+      const parsed = xmlParser.parse(text) as LedgerXML;
+      emacs.value = toTable(toArray(parsed.ledger.transactions.transaction));
+    } catch (e) {
+      console.log('unexpected xml', e);
     }
   }
   output.value = text;

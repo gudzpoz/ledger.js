@@ -83,6 +83,8 @@ export function parseSexpr(s: string): SExpr {
       return true;
     } else if (atom === 'nil') {
       return false;
+    } else if (atom === 'pending') {
+      return 'pending';
     }
     throw new Error(`Unknown atom: ${atom}`);
   }
