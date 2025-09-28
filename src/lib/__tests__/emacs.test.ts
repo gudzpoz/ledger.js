@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import parseSexpr from '../emacs';
+import { parseSexpr } from '../emacs';
 
 const tests = Object.entries({
   '1': 1,

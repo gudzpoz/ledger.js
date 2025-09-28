@@ -1,9 +1,9 @@
-type SExpr = number | string | boolean | SExpr[];
+export type SExpr = number | string | boolean | SExpr[];
 
 /**
  * Parses a string containing an S-expression into a JavaScript array.
  */
-export default function parseSexpr(s: string): SExpr {
+export function parseSexpr(s: string): SExpr {
   let i = 0;
 
   function parse(): SExpr {

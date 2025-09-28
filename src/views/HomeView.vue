@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 
-import { newInstance } from '@/lib/ledger';
-import parseSexpr from '@/lib/emacs';
+import { newInstance, parseEmacsString } from '@/lib/ledger';
 import { useLedgeStore } from '@/stores/ledges';
 
 const store = useLedgeStore();
@@ -13,6 +12,12 @@ function querySearch() {
   return store.bookmarks.map((value) => ({ value }));
 }
 
+const emacs = ref<{
+  date: string,
+  what: string,
+  account: string,
+  amount: string,
+}[]>([]);
 async function update() {
   const { command, input } = store;
   const ledger = await newInstance();
@@ -21,10 +26,16 @@ async function update() {
     input,
   );
   status.value = result.status;
-  let text = result.stdout === '' ? result.stderr : result.stdout;
+  const text = result.stdout === '' ? result.stderr : result.stdout;
+  emacs.value = [];
   if (text.startsWith('(')) {
     try {
-      text += '\n' + JSON.stringify(parseSexpr(text), null, 2);
+      emacs.value = parseEmacsString(text).flatMap(({ time, payee, postings }) => {
+        const rows = postings.map(({ account, amount }) => ({ date: '', what: '', account, amount }));
+        rows[0].date = new Date(time * 1000).toLocaleString();
+        rows[0].what = payee;
+        return rows;
+      });
     } catch (e) {
       console.log('unexpected non-sexpr', text, e);
     }
@@ -50,8 +61,13 @@ update();
       </ElFormItem>
     </ElForm>
     <template #footer>
+      <ElTable v-show="emacs.length !== 0" :data="emacs">
+        <el-table-column prop="date" label="Date" width="180" />
+        <el-table-column prop="what" label="Payee" width="180" />
+        <el-table-column prop="account" label="Account" />
+        <el-table-column prop="amount" label="Amount" />
+      </ElTable>
       <pre>{{ output }}</pre>
-      <ElText :type="status === 0 ? 'primary' : 'danger'">exit({{ status }})</ElText>
     </template>
   </ElCard>
 </template>

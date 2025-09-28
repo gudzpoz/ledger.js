@@ -1,6 +1,8 @@
 import loadLedger from '@ledger/ledger.js';
 import loadPath from '@ledger/ledger.wasm?url';
+
 import type { LedgerModule } from './types';
+import { parseSexpr, type SExpr } from './emacs';
 
 interface ExitStatus {
   name: 'ExitStatus',
@@ -27,7 +29,7 @@ class StringReader {
         return null;
       }
       const c = this.s[this.i];
-      if (c === undefined) {
+      if (c === void 0) {
         return null;
       } else {
         this.i += 1;
@@ -250,3 +252,76 @@ export async function newInstance() {
   await new Promise((accept) => runtime.FS.syncfs(true, accept));
   return new LedgerCLI(runtime, stdin, stdout, stderr);
 }
+
+export interface Posting {
+  lineNum: number,
+  account: string,
+  amount: string,
+  status: boolean,
+  comment?: string,
+}
+export interface Transaction {
+  file: string,
+  lineNum: number,
+  time: number,
+  code: boolean,
+  payee: string,
+  postings: Posting[],
+}
+
+function requireArray(x: SExpr): SExpr[] {
+  if (!Array.isArray(x)) {
+    throw new Error(`sexp: require array: ${x}`);
+  }
+  return x;
+}
+function requireString(x: SExpr): string {
+  if (typeof x !== 'string') {
+    throw new Error(`sexp: require string: ${x}`);
+  }
+  return x;
+}
+function requireNumber(x: SExpr): number {
+  if (typeof x !== 'number') {
+    throw new Error(`sexp: require number: ${x}`);
+  }
+  return x;
+}
+function requireBoolean(x: SExpr): boolean {
+  if (typeof x !== 'boolean') {
+    throw new Error(`sexp: require boolean: ${x}`);
+  }
+  return x;
+}
+
+export function parseEmacsString(emacs: string) {
+  const sexp = requireArray(parseSexpr(emacs));
+  return sexp.map((xact): Transaction => {
+    const [file, lineNum, time, code, payee, ...postings] = requireArray(xact);
+    const [high, low] = requireArray(time).map(requireNumber);
+    return {
+      file: requireString(file),
+      lineNum: requireNumber(lineNum),
+      time: high << 16 + low,
+      code: requireBoolean(code),
+      payee: requireString(payee),
+      postings: postings.map((posting) => {
+        const [lineNum, account, amount, status, comment] = requireArray(posting);
+        return {
+          lineNum: requireNumber(lineNum),
+          account: requireString(account),
+          amount: requireString(amount),
+          status: requireBoolean(status),
+          comment: comment ? requireString(comment) : void 0,
+        };
+      }),
+    };
+  });
+}
+
+export async function parseFile(path: string, instance?: LedgerCLI) {
+  const ledger = instance ?? await newInstance();
+  const out = ledger.run(['-f', path, 'emacs']).stdout;
+  return parseEmacsString(out);
+}
+

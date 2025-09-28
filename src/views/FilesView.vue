@@ -6,7 +6,7 @@ import {
   DocumentAdd, FolderAdd, Delete,
   Document, Folder, FolderOpened,
   Edit, Scissor,
- } from '@element-plus/icons-vue';
+} from '@element-plus/icons-vue';
 
 interface Tree {
   id: string,
