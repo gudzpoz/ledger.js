@@ -11,9 +11,15 @@ const menu = router.options.routes;
       <v-app-bar-title>{{ router.currentRoute.value.meta?.title }}</v-app-bar-title>
     </v-app-bar>
     <v-main>
-      <v-container><RouterView /></v-container>
+      <v-container>
+        <router-view v-slot="{ Component }">
+          <v-fade-transition hide-on-leave>
+            <component :is="Component" />
+          </v-fade-transition>
+        </router-view>
+      </v-container>
     </v-main>
-    <v-bottom-navigation :model-value="router.currentRoute.value.path">
+    <v-bottom-navigation :model-value="router.currentRoute.value.path" grow>
       <v-btn v-for="item in menu" :value="item.path" :key="item.path" :to="item.path">
         <v-icon :icon="item.meta?.icon as string" />
         <span>{{ item.meta?.title }}</span>

@@ -26,7 +26,7 @@ export interface LedgerXML {
 
 type OrMore<T> = T | T[];
 type XMLSome<T, Field extends string> = {
-  [key in Field]: T | T[];
+  [key in Field]?: T | T[];
 };
 
 export interface Ledger {
@@ -64,7 +64,7 @@ export interface BalanceAmount {
 }
 
 export interface Transaction {
-  date: string;
+  date: number | string;
   payee: string;
   code?: string;
   postings: XMLSome<Posting, 'posting'>;

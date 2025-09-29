@@ -272,11 +272,20 @@ function requireNumber(x: SExpr): number {
   return x;
 }
 
-export function asArray<T>(x: T | T[]) {
+export function asArray<T>(x?: T | T[]) {
+  if (!x) {
+    return [];
+  }
   if (Array.isArray(x)) {
     return x;
   }
   return [x];
+}
+export function toUnixSecs(date: number | string) {
+  if (typeof date === 'number') {
+    return date;
+  }
+  return Math.floor(new Date(date).getTime() / 1000);
 }
 
 export function parseEmacsString(emacs: string) {
@@ -285,7 +294,7 @@ export function parseEmacsString(emacs: string) {
     const [_file, _lineNum, time, code, payee, ...postings] = requireArray(xact);
     const [high, low] = requireArray(time).map(requireNumber);
     return {
-      date: new Date((high << 16 + low) * 1000).toISOString().substring(0, 10),
+      date: high << 16 + low,
       payee: requireString(payee),
       code: code ? requireString(code) : void 0,
       postings: {
