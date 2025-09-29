@@ -2,18 +2,13 @@
 import { ref, watch } from 'vue';
 import { XMLParser } from 'fast-xml-parser';
 
-import { newInstance, parseEmacsString } from '@/lib/ledger';
+import { asArray, newInstance, parseEmacsString } from '@/lib/ledger';
 import { useLedgeStore } from '@/stores/ledges';
 import type { CommodityQuantity, LedgerXML, Transaction } from '@/lib/types';
-import { toArray } from '@vueuse/core';
 
 const store = useLedgeStore();
 const status = ref(0);
 const output = ref('');
-
-function querySearch() {
-  return store.bookmarks.map((value) => ({ value }));
-}
 
 const xmlParser = new XMLParser({
   attributeNamePrefix: '',
@@ -25,12 +20,6 @@ const emacs = ref<{
   account: string,
   amount: string,
 }[]>([]);
-function asArray<T>(x: T | T[]) {
-  if (Array.isArray(x)) {
-    return x;
-  }
-  return [x];
-}
 function toTable(xacts: readonly Transaction[]) {
   return xacts.flatMap(({ date, payee, postings }) => {
     const rows = asArray(postings.posting).map(({ account, 'post-amount': amount }) => {
@@ -73,7 +62,7 @@ async function update() {
   } else if (text.startsWith('<')) {
     try {
       const parsed = xmlParser.parse(text) as LedgerXML;
-      emacs.value = toTable(toArray(parsed.ledger.transactions.transaction));
+      emacs.value = toTable(asArray(parsed.ledger.transactions.transaction));
     } catch (e) {
       console.log('unexpected xml', e);
     }
@@ -85,27 +74,17 @@ update();
 </script>
 
 <template>
-  <ElCard>
-    <ElForm>
-      <ElFormItem label="Ledger Command">
-        <ElAutocomplete
-          v-model="store.command"
-          :fetch-suggestions="querySearch"
-          clearable
-        />
-      </ElFormItem>
-      <ElFormItem label="Input">
-        <ElInput v-model="store.input" type="textarea" autosize style="font-family: monospace;" />
-      </ElFormItem>
-    </ElForm>
-    <template #footer>
-      <ElTable v-show="emacs.length !== 0" :data="emacs">
-        <el-table-column prop="date" label="Date" width="180" />
-        <el-table-column prop="what" label="Payee" width="180" />
-        <el-table-column prop="account" label="Account" />
-        <el-table-column prop="amount" label="Amount" />
-      </ElTable>
+  <v-card>
+    <v-card-text>
+      <v-form>
+        <v-combobox label="Ledger Command" :items="store.bookmarks" v-model="store.command" />
+        <v-textarea v-model="store.input"
+          label="Standard Input (stdin)" auto-grow style="font-family: monospace;" />
+      </v-form>
+    </v-card-text>
+    <v-card-text>
+      <v-data-table v-show="emacs.length !== 0" :items="emacs" />
       <pre>{{ output }}</pre>
-    </template>
-  </ElCard>
+    </v-card-text>
+  </v-card>
 </template>

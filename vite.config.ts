@@ -2,18 +2,25 @@ import { fileURLToPath, URL } from 'node:url';
 
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import vuetify from 'vite-plugin-vuetify';
+import ViteFonts from 'unplugin-fonts/vite';
 import vueDevTools from 'vite-plugin-vue-devtools';
-import AutoImport from 'unplugin-auto-import/vite';
-import Components from 'unplugin-vue-components/vite';
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
+    vuetify({ autoImport: { labs: true } }),
+    ViteFonts({
+      fontsource: {
+        families: [{
+          name: 'Roboto',
+          weights: [400, 700],
+          styles: ['normal', 'italic'],
+        }],
+      },
+    }),
     vueDevTools(),
-    AutoImport({ resolvers: [ElementPlusResolver()] }),
-    Components({ resolvers: [ElementPlusResolver()] }),
   ],
   resolve: {
     alias: {

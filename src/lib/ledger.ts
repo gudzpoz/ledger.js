@@ -272,6 +272,13 @@ function requireNumber(x: SExpr): number {
   return x;
 }
 
+export function asArray<T>(x: T | T[]) {
+  if (Array.isArray(x)) {
+    return x;
+  }
+  return [x];
+}
+
 export function parseEmacsString(emacs: string) {
   const sexp = requireArray(parseSexpr(emacs));
   return sexp.map((xact): Transaction => {

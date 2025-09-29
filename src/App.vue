@@ -6,19 +6,20 @@ const menu = router.options.routes;
 </script>
 
 <template>
-  <el-container>
-    <el-header style="--el-header-padding: 0">
-      <el-menu mode="horizontal" router :default-active="router.currentRoute.value.path">
-        <el-menu-item v-for="item in menu" :index="item.path" :key="item.path">
-          {{ item.meta?.['title'] }}
-        </el-menu-item>
-      </el-menu>
-    </el-header>
-    <el-main>
-      <RouterView />
-    </el-main>
-  </el-container>
-
+  <v-app>
+    <v-app-bar>
+      <v-app-bar-title>{{ router.currentRoute.value.meta?.title }}</v-app-bar-title>
+    </v-app-bar>
+    <v-main>
+      <v-container><RouterView /></v-container>
+    </v-main>
+    <v-bottom-navigation :model-value="router.currentRoute.value.path">
+      <v-btn v-for="item in menu" :value="item.path" :key="item.path" :to="item.path">
+        <v-icon :icon="item.meta?.icon as string" />
+        <span>{{ item.meta?.title }}</span>
+      </v-btn>
+    </v-bottom-navigation>
+  </v-app>
 </template>
 
 <style scoped>

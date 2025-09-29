@@ -1,12 +1,9 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue';
+import { VTextarea, VTextField } from 'vuetify/components';
+import { useConfirm, useSnackbar } from 'vuetify-use-dialog';
+
 import { newInstance, DATA_DIR } from '@/lib/ledger';
-import { ElInput, ElMessage, ElMessageBox } from 'element-plus';
-import { h, onMounted, ref } from 'vue';
-import {
-  DocumentAdd, FolderAdd, Delete,
-  Document, Folder, FolderOpened,
-  Edit, Scissor,
-} from '@element-plus/icons-vue';
 
 interface Tree {
   id: string,
@@ -15,6 +12,8 @@ interface Tree {
 }
 
 const files = ref<Tree[]>([]);
+const confirm = useConfirm();
+const toast = useSnackbar();
 const useFS = newInstance().then((ledger) => ledger.FS());
 
 async function updateFiles() {
@@ -46,13 +45,33 @@ async function withErrorMessage(f: () => Promise<void>) {
   try {
     await f();
   } catch (e) {
-    ElMessage({ type: 'error', message: `${JSON.stringify(e)}` });
+    toast({ text: `${JSON.stringify(e)}`, snackbarProps: { variant: 'tonal' } });
   }
 }
+function prompt(title: string, label: string, value?: string) {
+  return new Promise<string>((accept, reject) => {
+    const v = ref(value ?? '');
+    confirm({
+      title,
+      contentComponent: VTextField,
+      contentComponentProps: {
+        label,
+        modelValue: value,
+        "onUpdate:modelValue": (text: string) => v.value = text,
+      },
+    }).then((confirmed) => {
+      if (confirmed) {
+        accept(v.value);
+      } else {
+        reject('Cancelled');
+      }
+    });
+  });
+}
 async function createFile(data: Tree, folder: boolean) {
-  const fileName = ElMessageBox.prompt('', 'File Name?');
+  const fileName = prompt('', 'File Name?');
   try {
-    const path = `${data.id}/${(await fileName).value}`;
+    const path = `${data.id}/${(await fileName)}`;
     withErrorMessage(async () => {
       const fs = await useFS;
       if (folder) {
@@ -62,112 +81,94 @@ async function createFile(data: Tree, folder: boolean) {
       }
     });
   } catch (e) {
-    ElMessage({ type: 'info', message: `${e}` });
+    toast({ text: `${e}`, snackbarProps: { variant: 'outlined' }});
   }
   updateFiles();
 }
 async function editFile(data: Tree) {
   const fs = await useFS;
   const content = ref(new TextDecoder().decode(fs.readFile(data.id)));
-  try {
-    await ElMessageBox({
-      title: 'Editor',
-      customClass: 'editor',
-      message: () => h(
-        ElInput,
-        {
-          type: 'textarea',
-          autosize: { minRows: 8, maxRows: 16 },
-          modelValue: content.value,
-          'onUpdate:modelValue': (v) => content.value = v,
-        },
-      ),
-    });
+  const confirmed = await confirm({
+    title: data.id,
+    contentComponent: VTextarea,
+    contentComponentProps: {
+      autoGrow: true,
+      rows: 8,
+      maxRows: 16,
+      modelValue: content.value,
+      'onUpdate:modelValue': (v: string) => content.value = v,
+    },
+  });
+  if (confirmed) {
     withErrorMessage(async () => {
       fs.writeFile(data.id, content.value);
     });
-  } catch (e) {
-    ElMessage({ type: 'info', message: `${e}` });
   }
 }
 async function renameFile(data: Tree) {
-  const fileName = ElMessageBox.prompt('', 'New File Name?', {
-    inputValue: data.id,
-  });
+  const fileName = prompt('', 'New File Name?', data.id);
   try {
     const path = await fileName;
     withErrorMessage(async () => {
       const fs = await useFS;
-      fs.rename(data.id, path.value);
+      fs.rename(data.id, path);
     });
   } catch (e) {
-    ElMessage({ type: 'info', message: `${e}` });
+    toast({ text: `${e}`, snackbarProps: { variant: 'outlined' }});
   }
   updateFiles();
 }
-async function deleteFile(data: Tree) {
-  const result = await ElMessageBox.confirm(`File: ${data.id}`, 'Delete?');
+async function deleteFile(data: Tree, rmdir: boolean) {
+  const { id: path } = data;
+  const result = await confirm({
+    title: 'Delete?',
+    content: `File: ${path}`,
+  });
   if (result) {
     const fs = await useFS;
-    withErrorMessage(async () => fs.unlink(data.id));
+    if (rmdir) {
+      const recursive = fs.readdir(path).filter(
+        (f) => f !== '.' && f !== '..',
+      ).length !== 0 && await confirm({
+        title: 'Delete?',
+        content: `Directory \`${path}' not empty. Delete recursively?`,
+      });
+      if (recursive) {
+        async function deleteDeep(file: string) {
+          console.log(file);
+          if (fs.isDir(fs.stat(file).mode)) {
+            fs.readdir(file).filter((f) => f !== '.' && f !== '..')
+              .forEach((f) => deleteDeep(`${file}/${f}`));
+            fs.rmdir(file);
+          } else {
+            fs.unlink(file);
+          }
+        }
+        withErrorMessage(async () => deleteDeep(path));
+      } else {
+        withErrorMessage(async () => fs.rmdir(path));
+      }
+    } else {
+      withErrorMessage(async () => fs.unlink(path));
+    }
   }
   updateFiles();
 }
 </script>
 
 <template>
-  <ElCard>
-    <ElTree :data="files" style="--el-tree-node-content-height: 3em"
-     highlight-current default-expand-all>
-      <template #default="{ node, data }">
-        <div class="file">
-          <div class="info">
-            <ElIcon size="20">
-              <Document v-if="node.isLeaf" />
-              <Folder v-else-if="!node.expanded" />
-              <FolderOpened v-else />
-            </ElIcon>
-            <span>{{ data.label }}</span>
-          </div>
-          <div class="action">
-            <ElButton type="success" @click="createFile(data, false)" v-if="data.children">
-              <ElIcon><DocumentAdd /></ElIcon>
-            </ElButton>
-            <ElButton type="success" @click="createFile(data, true)" v-if="data.children">
-              <ElIcon><FolderAdd /></ElIcon>
-            </ElButton>
-            <ElButton type="primary" @click="editFile(data)" v-if="!data.children">
-              <ElIcon><Edit /></ElIcon>
-            </ElButton>
-            <ElButton type="primary" @click="renameFile(data)" v-if="!data.children">
-              <ElIcon><Scissor /></ElIcon>
-            </ElButton>
-            <ElButton type="danger" @click="deleteFile(data)" v-if="data.id !== DATA_DIR">
-              <ElIcon><Delete /></ElIcon>
-            </ElButton>
-          </div>
-        </div>
+  <v-card>
+    <v-treeview :items="files" open-all item-value="id" item-title="label">
+      <template #prepend="{ item, isOpen }">
+        <v-icon :icon="item.children ? (isOpen ? 'mdi-folder-open' : 'mdi-folder') : 'mdi-note-text'" />
       </template>
-    </ElTree>
-  </ElCard>
+      <template v-slot:append="{ item }">
+        <v-icon-btn icon="mdi-note-plus" @click="createFile(item, false)" v-if="item.children" />
+        <v-icon-btn icon="mdi-folder-plus" @click="createFile(item, true)" v-if="item.children" />
+        <v-icon-btn icon="mdi-pencil-box-outline" @click="editFile(item)" v-if="!item.children" />
+        <v-icon-btn icon="mdi-rename" @click="renameFile(item)" v-if="!item.children" />
+        <v-icon-btn icon="mdi-delete" @click="deleteFile(item, !!item.children)" v-if="item.id !== DATA_DIR" />
+      </template>
+    </v-treeview>
+  </v-card>
 </template>
-
-<style>
-.file {
-  flex: 1;
-  justify-content: space-between;
-  font-size: 14px;
-  padding-right: 4em;
-}
-.file, .file > * {
-  display: flex;
-  align-items: center;
-}
-.file .info > * {
-  font-size: 1.2em;
-  margin-right: 0.5em;
-}
-.editor .el-message-box__container {
-  display: block;
-}
-</style>
