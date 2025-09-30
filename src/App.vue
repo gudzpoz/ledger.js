@@ -11,7 +11,7 @@ const menu = router.options.routes;
       <v-app-bar-title>{{ router.currentRoute.value.meta?.title }}</v-app-bar-title>
     </v-app-bar>
     <v-main>
-      <v-container>
+      <v-container width="100vw">
         <router-view v-slot="{ Component }">
           <v-fade-transition hide-on-leave>
             <component :is="Component" />

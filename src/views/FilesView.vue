@@ -45,7 +45,7 @@ async function withErrorMessage(f: () => Promise<void>) {
   try {
     await f();
   } catch (e) {
-    toast({ text: `${JSON.stringify(e)}`, snackbarProps: { variant: 'tonal' } });
+    toast({ text: `${JSON.stringify(e)}` });
   }
 }
 function prompt(title: string, label: string, value?: string) {
@@ -81,7 +81,7 @@ async function createFile(data: Tree, folder: boolean) {
       }
     });
   } catch (e) {
-    toast({ text: `${e}`, snackbarProps: { variant: 'outlined' }});
+    toast({ text: `${e}` });
   }
   updateFiles();
 }
@@ -114,7 +114,7 @@ async function renameFile(data: Tree) {
       fs.rename(data.id, path);
     });
   } catch (e) {
-    toast({ text: `${e}`, snackbarProps: { variant: 'outlined' }});
+    toast({ text: `${e}` });
   }
   updateFiles();
 }
