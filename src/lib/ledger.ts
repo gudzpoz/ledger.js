@@ -5,9 +5,9 @@ import type { LedgerModule, Transaction } from './types';
 import { parseSexpr, type SExpr } from './emacs';
 
 interface ExitStatus {
-  name: 'ExitStatus',
-  message: string,
-  status: number,
+  name: 'ExitStatus';
+  message: string;
+  status: number;
 }
 
 class StringReader {
@@ -47,7 +47,9 @@ class StringBuilder {
   }
 
   appender() {
-    return (s: string) => { this.s += s + '\n'; };
+    return (s: string) => {
+      this.s += s + '\n';
+    };
   }
 
   clear() {
@@ -195,6 +197,7 @@ class WebAssemblyCaching {
     globalThis.fetch = this.#fetchAdvice;
     WebAssembly.instantiateStreaming = this.#instantiateAdvice;
   }
+
   disable() {
     globalThis.fetch = this.#fetch;
     WebAssembly.instantiateStreaming = this.#instantiateStreaming;
@@ -206,6 +209,7 @@ class WebAssemblyCaching {
     }
     return this.#fetch(...args);
   };
+
   #instantiateAdvice: typeof WebAssembly.instantiateStreaming = async (source, imports) => {
     const fake = await source;
     if (fake !== null) {
@@ -301,7 +305,7 @@ export function parseEmacsString(emacs: string) {
         posting: postings.map((posting) => {
           const [_lineNum, account, amount, status, comment] = requireArray(posting);
           return {
-            account: { ref: '', name: requireString(account) },
+            'account': { ref: '', name: requireString(account) },
             'post-amount': {
               amount: {
                 commodity: {
@@ -310,8 +314,8 @@ export function parseEmacsString(emacs: string) {
                 quantity: NaN, // FIXME: properly parse amount?
               },
             },
-            state: typeof status === 'boolean' ? (status ? 'cleared' : void 0) : 'pending',
-            note: comment ? requireString(comment) : void 0,
+            'state': typeof status === 'boolean' ? (status ? 'cleared' : void 0) : 'pending',
+            'note': comment ? requireString(comment) : void 0,
           };
         }),
       },
@@ -324,4 +328,3 @@ export async function parseFile(path: string, instance?: LedgerCLI) {
   const out = ledger.run(['-f', path, 'emacs']).stdout;
   return parseEmacsString(out);
 }
-

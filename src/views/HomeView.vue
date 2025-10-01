@@ -24,10 +24,10 @@ const xmlParser = new XMLParser({
 const accounts = ref<Account[]>([]);
 const xacts = ref<Transaction[]>([]);
 const emacs = ref<{
-  date: string,
-  what: string,
-  account: string,
-  amount: string,
+  date: string;
+  what: string;
+  account: string;
+  amount: string;
 }[]>([]);
 function toTable(xacts: readonly Transaction[]) {
   return xacts.flatMap(({ date, payee, postings }) => {

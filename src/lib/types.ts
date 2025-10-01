@@ -1,6 +1,6 @@
 /// <reference types='emscripten' />
 
-//#region Emscripten
+// #region Emscripten
 interface TypeIDBFS extends Emscripten.FileSystemType {
   DB_VERSION: number;
   DB_STORE_NAME: string;
@@ -17,9 +17,9 @@ export interface LedgerModule extends EmscriptenModule {
 }
 
 export type LedgerFactory = EmscriptenModuleFactory<LedgerModule>;
-//#endregion Emscripten
+// #endregion Emscripten
 
-//#region XML
+// #region XML
 export interface LedgerXML {
   ledger: Ledger;
 }
@@ -51,9 +51,9 @@ export interface CommodityQuantity {
 }
 
 export interface Account extends XMLSome<Account, 'account'> {
-  id: string;
-  name: string;
-  fullname: string;
+  'id': string;
+  'name': string;
+  'fullname': string;
   'account-amount'?: BalanceAmount;
   'account-total'?: BalanceAmount;
 }
@@ -70,16 +70,16 @@ export interface Transaction {
   postings: XMLSome<Posting, 'posting'>;
 }
 export interface Posting {
-  account: { ref: string; name: string };
+  'account': { ref: string; name: string };
   'post-amount': Amount;
-  total?: BalanceAmount;
-  state?: 'pending' | 'cleared';
-  cost?: CommodityQuantity;
-  note?: string;
-  metadata?: Metadata;
+  'total'?: BalanceAmount;
+  'state'?: 'pending' | 'cleared';
+  'cost'?: CommodityQuantity;
+  'note'?: string;
+  'metadata'?: Metadata;
 }
 export interface Metadata {
   value?: OrMore<{ key: string; string: string }>;
   tag?: OrMore<string>;
 }
-//#endregion XML
+// #endregion XML

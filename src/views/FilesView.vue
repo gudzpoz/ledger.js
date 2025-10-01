@@ -6,9 +6,9 @@ import { useConfirm, useSnackbar } from 'vuetify-use-dialog';
 import { newInstance, DATA_DIR } from '@/lib/ledger';
 
 interface Tree {
-  id: string,
-  label: string,
-  children?: Tree[],
+  id: string;
+  label: string;
+  children?: Tree[];
 }
 
 const files = ref<Tree[]>([]);
@@ -56,8 +56,8 @@ function prompt(title: string, label: string, value?: string) {
       contentComponent: VTextField,
       contentComponentProps: {
         label,
-        modelValue: value,
-        "onUpdate:modelValue": (text: string) => v.value = text,
+        'modelValue': value,
+        'onUpdate:modelValue': (text: string) => v.value = text,
       },
     }).then((confirmed) => {
       if (confirmed) {
@@ -92,10 +92,10 @@ async function editFile(data: Tree) {
     title: data.id,
     contentComponent: VTextarea,
     contentComponentProps: {
-      autoGrow: true,
-      rows: 8,
-      maxRows: 16,
-      modelValue: content.value,
+      'autoGrow': true,
+      'rows': 8,
+      'maxRows': 16,
+      'modelValue': content.value,
       'onUpdate:modelValue': (v: string) => content.value = v,
     },
   });
