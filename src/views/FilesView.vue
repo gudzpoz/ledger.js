@@ -3,7 +3,8 @@ import { onMounted, ref } from 'vue';
 import { VTextarea, VTextField } from 'vuetify/components';
 import { useConfirm, useSnackbar } from 'vuetify-use-dialog';
 
-import { newInstance, DATA_DIR } from '@/lib/ledger';
+import { DATA_DIR } from '@/lib/ledger-config';
+import { useLedgerFS } from '@/lib/ledger-web';
 
 interface Tree {
   id: string;
@@ -14,10 +15,9 @@ interface Tree {
 const files = ref<Tree[]>([]);
 const confirm = useConfirm();
 const toast = useSnackbar();
-const useFS = newInstance().then((ledger) => ledger.FS());
 
 async function updateFiles() {
-  const fs = await useFS;
+  const fs = await useLedgerFS();
   files.value = [{
     id: DATA_DIR,
     label: DATA_DIR,
@@ -73,7 +73,7 @@ async function createFile(data: Tree, folder: boolean) {
   try {
     const path = `${data.id}/${(await fileName)}`;
     withErrorMessage(async () => {
-      const fs = await useFS;
+      const fs = await useLedgerFS();
       if (folder) {
         fs.mkdir(path);
       } else {
@@ -86,7 +86,7 @@ async function createFile(data: Tree, folder: boolean) {
   updateFiles();
 }
 async function editFile(data: Tree) {
-  const fs = await useFS;
+  const fs = await useLedgerFS();
   const content = ref(new TextDecoder().decode(fs.readFile(data.id)));
   const confirmed = await confirm({
     title: data.id,
@@ -110,7 +110,7 @@ async function renameFile(data: Tree) {
   try {
     const path = await fileName;
     withErrorMessage(async () => {
-      const fs = await useFS;
+      const fs = await useLedgerFS();
       fs.rename(data.id, path);
     });
   } catch (e) {
@@ -125,7 +125,7 @@ async function deleteFile(data: Tree, rmdir: boolean) {
     content: `File: ${path}`,
   });
   if (result) {
-    const fs = await useFS;
+    const fs = await useLedgerFS();
     if (rmdir) {
       const recursive = fs.readdir(path).filter(
         (f) => f !== '.' && f !== '..',
@@ -158,11 +158,16 @@ async function deleteFile(data: Tree, rmdir: boolean) {
 
 <template>
   <v-card>
-    <v-treeview :items="files" open-all item-value="id" item-title="label">
+    <v-treeview :items="files"
+      open-all open-on-click hide-actions indent-lines="default"
+      item-value="id" item-title="label"
+      style="margin: 1em 2em;"
+      >
       <template #prepend="{ item, isOpen }">
         <v-icon :icon="item.children ? (isOpen ? 'mdi-folder-open' : 'mdi-folder') : 'mdi-note-text'" />
       </template>
       <template v-slot:append="{ item }">
+        <!-- TODO: Alt texts are all icons / icon buttons. -->
         <v-icon-btn icon="mdi-note-plus" @click="createFile(item, false)" v-if="item.children" />
         <v-icon-btn icon="mdi-folder-plus" @click="createFile(item, true)" v-if="item.children" />
         <v-icon-btn icon="mdi-pencil-box-outline" @click="editFile(item)" v-if="!item.children" />

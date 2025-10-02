@@ -1,6 +1,7 @@
 import { fileURLToPath, URL } from 'node:url';
 
 import { defineConfig } from 'vite';
+import { comlink } from 'vite-plugin-comlink';
 import vue from '@vitejs/plugin-vue';
 import vuetify from 'vite-plugin-vuetify';
 import ViteFonts from 'unplugin-fonts/vite';
@@ -10,6 +11,7 @@ import vueDevTools from 'vite-plugin-vue-devtools';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    comlink(),
     vue(),
     vuetify({ autoImport: { labs: true } }),
     ViteFonts({
@@ -68,5 +70,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@ledger': fileURLToPath(new URL('./ledger/build', import.meta.url)),
     },
+  },
+  worker: {
+    plugins: () => [comlink()],
   },
 });

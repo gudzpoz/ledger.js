@@ -24,6 +24,12 @@ const router = createRouter({
       component: () => import('../views/FilesView.vue'),
     },
     {
+      path: '/add',
+      name: 'add',
+      meta: { title: 'Add', icon: 'mdi-plus' },
+      component: () => import('../views/AddXactView.vue'),
+    },
+    {
       path: '/about',
       name: 'about',
       meta: { title: 'About', icon: 'mdi-cog' },

@@ -83,3 +83,10 @@ export interface Metadata {
   tag?: OrMore<string>;
 }
 // #endregion XML
+
+// #region API
+export interface AccountTrie {
+  id?: string;
+  children?: Record<string, AccountTrie>;
+}
+// #endregion API

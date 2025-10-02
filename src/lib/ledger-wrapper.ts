@@ -1,8 +1,9 @@
 import loadLedger from '@ledger/ledger.js';
 import loadPath from '@ledger/ledger.wasm?url';
 
-import type { LedgerModule, Transaction } from './types';
+import type { LedgerModule, Transaction } from './ledger-types';
 import { parseSexpr, type SExpr } from './emacs';
+import { DATA_DIR } from './ledger-config';
 
 interface ExitStatus {
   name: 'ExitStatus';
@@ -60,7 +61,7 @@ class StringBuilder {
 /**
  * Ledger execution results.
  */
-interface LedgerResult {
+export interface LedgerResult {
   stdout: string;
   stderr: string;
   status: number;
@@ -234,8 +235,6 @@ class WebAssemblyCaching {
 export const caching = new WebAssemblyCaching();
 caching.enable();
 
-export const DATA_DIR = '/data';
-
 /**
  * Loads the required WASM files for Ledger and instantiates one.
  */
@@ -274,22 +273,6 @@ function requireNumber(x: SExpr): number {
     throw new Error(`sexp: require number: ${x}`);
   }
   return x;
-}
-
-export function asArray<T>(x?: T | T[]) {
-  if (!x) {
-    return [];
-  }
-  if (Array.isArray(x)) {
-    return x;
-  }
-  return [x];
-}
-export function toUnixSecs(date: number | string) {
-  if (typeof date === 'number') {
-    return date;
-  }
-  return Math.floor(new Date(date).getTime() / 1000);
 }
 
 export function parseEmacsString(emacs: string) {

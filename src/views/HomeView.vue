@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { XMLParser } from 'fast-xml-parser';
 
 import type { SingleAxisComponentOption, TooltipComponentOption } from 'echarts';
 import { use as eChartUse } from 'echarts/core';
@@ -9,18 +8,15 @@ import { BarChart, LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent } from 'echarts/components';
 import VChart from 'vue-echarts';
 
-import { asArray, newInstance, parseEmacsString, toUnixSecs } from '@/lib/ledger';
+import { asArray, toUnixSecs } from '@/lib/ledger-config';
+import { useLedger } from '@/lib/ledger-web';
 import { useLedgeStore } from '@/stores/ledges';
-import type { Account, CommodityQuantity, LedgerXML, Transaction } from '@/lib/types';
+import type { Account, CommodityQuantity, Transaction } from '@/lib/ledger-types';
 
 const store = useLedgeStore();
 const status = ref(0);
 const output = ref('');
 
-const xmlParser = new XMLParser({
-  attributeNamePrefix: '',
-  ignoreAttributes: false,
-});
 const accounts = ref<Account[]>([]);
 const xacts = ref<Transaction[]>([]);
 const emacs = ref<{
@@ -54,30 +50,24 @@ function toTable(xacts: readonly Transaction[]) {
 }
 async function update() {
   const { command, input } = store;
-  const ledger = await newInstance();
-  const result = ledger.run(
+  const ledger = useLedger();
+  const result = await ledger.execute(
     command.split(/\s+/).filter((s) => !!s),
     input,
   );
   status.value = result.status;
   const text = result.stdout === '' ? result.stderr : result.stdout;
   emacs.value = [];
-  if (text.startsWith('(')) {
-    try {
-      xacts.value = parseEmacsString(text);
-      emacs.value = toTable(xacts.value);
-    } catch (e) {
-      console.log('unexpected non-sexpr', text, e);
-    }
-  } else if (text.startsWith('<')) {
-    try {
-      const parsed = xmlParser.parse(text) as LedgerXML;
-      accounts.value = asArray(parsed.ledger.accounts.account);
-      xacts.value = asArray(parsed.ledger.transactions.transaction);
-      emacs.value = toTable(xacts.value);
-    } catch (e) {
-      console.log('unexpected xml', e);
-    }
+  if (result.parsed?.type === 'emacs') {
+    xacts.value = result.parsed.transactions;
+    emacs.value = toTable(xacts.value);
+  } else if (result.parsed?.type === 'xml') {
+    const parsed = result.parsed.xml;
+    accounts.value = asArray(parsed.ledger.accounts.account);
+    xacts.value = asArray(parsed.ledger.transactions.transaction);
+    emacs.value = toTable(xacts.value);
+  } else if (result.parsed?.type === 'error') {
+    console.log(result.parsed.error);
   }
   output.value = text;
 }

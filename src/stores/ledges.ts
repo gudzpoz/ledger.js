@@ -3,7 +3,8 @@ import { defineStore } from 'pinia';
 
 import debounce from 'debounce';
 
-import { newInstance, DATA_DIR } from '@/lib/ledger';
+import { DATA_DIR } from '@/lib/ledger-config';
+import { useLedgerFS } from '@/lib/ledger-web';
 import wow from '../../ledger/test/input/wow.dat?raw';
 
 function state() {
@@ -17,7 +18,7 @@ function state() {
   const command = ref(bookmarks.value[0]);
   const input = ref(wow);
   watch(input, debounce(async (text) => {
-    const fs = (await newInstance()).FS();
+    const fs = await useLedgerFS();
     fs.writeFile(`${DATA_DIR}/stdin`, text);
   }, 1000));
   return { bookmarks, command, input };
